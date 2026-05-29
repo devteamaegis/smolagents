@@ -377,7 +377,16 @@ def check_import_authorized(import_to_check: str, authorized_imports: list[str])
         if part not in current_node:
             return False
         current_node = current_node[part]
-    return True
+    # After consuming all parts of import_to_check there are three cases:
+    #   1. current_node is empty  → exact match, the import is authorized.
+    #   2. current_node contains "*" → wildcard authorizes this level and
+    #      all sub-paths, so the import is authorized.
+    #   3. current_node is non-empty without "*" → we consumed only a prefix
+    #      of a more-specific authorized path.  The import_to_check is a
+    #      parent module that is NOT itself authorized.
+    #      Example: authorized=["os.path"], check("os") leaves
+    #      current_node={"path":{}}, so bare "os" must be rejected.
+    return len(current_node) == 0 or "*" in current_node
 
 
 def evaluate_attribute(
